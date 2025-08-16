@@ -1,5 +1,3 @@
-#![no_std]
-
 use crate::themes::Theme;
 use embedded_graphics::prelude::*;
 

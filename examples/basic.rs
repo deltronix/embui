@@ -6,9 +6,9 @@ use embedded_graphics::{
 };
 use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 use embedded_layout::{layout::linear::LinearLayout, prelude::*};
-use gui::themes::Theme;
-use gui::widgets::Button;
-use gui::widgets::Widget;
+use embui::themes::Theme;
+use embui::widgets::Button;
+use embui::widgets::Widget;
 
 fn main() -> Result<(), core::convert::Infallible> {
     let mut display: SimulatorDisplay<Rgb888> = SimulatorDisplay::new(Size::new(320, 240));

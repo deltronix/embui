@@ -71,7 +71,7 @@ where
             .alignment(HorizontalAlignment::Center)
             .paragraph_spacing(6)
             .build();
-        let character_style = MonoTextStyle::new(theme.normal_font(), theme.button_normal_text());
+        let character_style = MonoTextStyle::new(T::normal_font(), theme.button_normal_text());
         let label = TextBox::with_textbox_style(
             self.label,
             self.bounding_box(),

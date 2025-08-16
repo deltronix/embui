@@ -64,16 +64,16 @@ where
         C::from(Rgb888::CSS_ORANGE)
     }
 
-    fn small_font(&self) -> &'static MonoFont {
+    fn small_font() -> &'static MonoFont<'static> {
         &FONT_4X6
     }
-    fn normal_font(&self) -> &'static MonoFont {
+    fn normal_font() -> &'static MonoFont<'static> {
         &FONT_6X10
     }
-    fn large_font(&self) -> &'static MonoFont {
+    fn large_font() -> &'static MonoFont<'static> {
         &FONT_8X13
     }
-    fn title_font(&self) -> &'static MonoFont {
+    fn title_font() -> &'static MonoFont<'static> {
         &FONT_10X20
     }
 }
