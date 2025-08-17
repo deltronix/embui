@@ -19,10 +19,10 @@ pub trait Theme<C: PixelColor> {
     fn warning_color(&self) -> C;
 
     // Typography
-    fn small_font() -> &'static MonoFont<'static>;
-    fn normal_font() -> &'static MonoFont<'static>;
-    fn large_font() -> &'static MonoFont<'static>;
-    fn title_font() -> &'static MonoFont<'static>;
+    fn small_font(&self) -> &'static MonoFont<'static>;
+    fn normal_font(&self) -> &'static MonoFont<'static>;
+    fn large_font(&self) -> &'static MonoFont<'static>;
+    fn title_font(&self) -> &'static MonoFont<'static>;
 
     // Spacing
     fn spacing_xs(&self) -> u32 {
