@@ -2,7 +2,10 @@ use core::marker::PhantomData;
 
 use crate::{
     themes::{DefaultTheme, Theme},
-    widgets::Widget,
+    widgets::{
+        Widget,
+        state::{StateManager, WidgetState},
+    },
 };
 use embedded_graphics::{
     mono_font::{MonoTextStyle, iso_8859_2::FONT_6X10},
@@ -19,17 +22,22 @@ use embedded_text::{
     style::{HeightMode, TextBoxStyleBuilder},
 };
 
-#[derive(Clone, Copy, Debug)]
-pub struct Button<'a, C: PixelColor> {
+#[derive(Clone, Debug)]
+pub struct Button<'a, C>
+where
+    C: PixelColor + Default + From<Rgb888> + 'static,
+{
     ph: PhantomData<C>,
     label: &'a str,
     pos: Point,
     size: Size,
+    state_manager: StateManager,
+    on_click: Option<fn()>,
 }
 
 impl<'a, C> Button<'a, C>
 where
-    C: PixelColor,
+    C: PixelColor + Default + From<Rgb888> + 'static,
 {
     pub fn new(label: &'a str, pos: Point, size: Size) -> Self {
         Self {
@@ -37,13 +45,49 @@ where
             pos,
             size,
             ph: PhantomData,
+            state_manager: StateManager::default(),
+            on_click: None,
+        }
+    }
+
+    pub fn with_callback(mut self, callback: fn()) -> Self {
+        self.on_click = Some(callback);
+        self
+    }
+    fn get_colors_for_state<T: Theme<C>>(&self, theme: &T) -> (C, C, C) {
+        match self.get_state() {
+            WidgetState::Normal => (
+                theme.button_normal_bg(),
+                theme.button_normal_text(),
+                theme.button_normal_border(),
+            ),
+            WidgetState::Hovered => (
+                theme.button_hovered_bg(),
+                theme.button_hovered_text(),
+                theme.button_hovered_border(),
+            ),
+            WidgetState::Pressed => (
+                theme.button_pressed_bg(),
+                theme.button_pressed_text(),
+                theme.button_pressed_border(),
+            ),
+            WidgetState::Focused => (
+                theme.button_hovered_bg(),
+                theme.button_hovered_text(),
+                theme.primary_color(), // Different border for focus
+            ),
+            WidgetState::Disabled => (
+                theme.button_disabled_bg(),
+                theme.button_disabled_text(),
+                theme.button_disabled_border(),
+            ),
         }
     }
 }
 
 impl<'a, C> Drawable for Button<'a, C>
 where
-    C: PixelColor + From<Rgb888> + From<BinaryColor> + Default + 'static,
+    C: PixelColor + From<Rgb888> + Default + 'static,
 {
     type Color = C;
     type Output = ();
@@ -59,19 +103,26 @@ where
 }
 impl<'a, C> Widget<C> for Button<'a, C>
 where
-    C: PixelColor + Default + From<BinaryColor> + From<Rgb888> + 'static,
+    C: PixelColor + Default + From<Rgb888> + 'static,
 {
+    fn get_state_manager(&self) -> &StateManager {
+        &self.state_manager
+    }
+    fn get_state_manager_mut(&mut self) -> &mut StateManager {
+        &mut self.state_manager
+    }
     fn draw_with_theme<D, T>(&self, target: &mut D, theme: &T) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = C>,
         T: Theme<C>,
     {
+        let (background_color, text_color, border_color) = self.get_colors_for_state(theme);
         let textbox_style = TextBoxStyleBuilder::new()
             .height_mode(HeightMode::FitToText)
             .alignment(HorizontalAlignment::Center)
             .paragraph_spacing(6)
             .build();
-        let character_style = MonoTextStyle::new(T::normal_font(), theme.button_normal_text());
+        let character_style = MonoTextStyle::new(T::normal_font(), text_color);
         let label = TextBox::with_textbox_style(
             self.label,
             self.bounding_box(),
@@ -80,8 +131,8 @@ where
         );
 
         let outline_style = PrimitiveStyleBuilder::new()
-            .fill_color(theme.button_normal_bg())
-            .stroke_color(theme.button_normal_border())
+            .fill_color(background_color)
+            .stroke_color(border_color)
             .stroke_width(theme.spacing_xs())
             .build();
 
@@ -107,10 +158,10 @@ where
 
 impl<C> Transform for Button<'_, C>
 where
-    C: PixelColor,
+    C: PixelColor + From<Rgb888> + Default + 'static,
 {
     fn translate(&self, by: Point) -> Self {
-        let mut new_button = *self;
+        let mut new_button = self.clone();
         new_button.pos += by;
         new_button
     }
@@ -123,7 +174,7 @@ where
 
 impl<C> Dimensions for Button<'_, C>
 where
-    C: PixelColor,
+    C: PixelColor + From<Rgb888> + Default + 'static,
 {
     fn bounding_box(&self) -> Rectangle {
         Rectangle::new(self.pos, self.size)
