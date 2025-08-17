@@ -4,19 +4,20 @@ use embedded_graphics::{
     prelude::*,
     primitives::{PrimitiveStyleBuilder, Rectangle},
 };
-use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
+use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window, sdl2::Keycode};
 use embedded_layout::{layout::linear::LinearLayout, prelude::*};
-use embui::themes::Theme;
 use embui::widgets::Button;
 use embui::widgets::Widget;
+use embui::{InputEvent, themes::Theme};
 
 fn main() -> Result<(), core::convert::Infallible> {
     let mut display: SimulatorDisplay<Rgb888> = SimulatorDisplay::new(Size::new(320, 240));
-    let output_settings = OutputSettingsBuilder::new().scale(2).build();
+    let output_settings = OutputSettingsBuilder::new().scale(4).build();
+    let mut window = Window::new("buttons.rs", &output_settings);
 
     let display_area = display.bounding_box();
 
-    let button = Button::new("test", Point::zero(), Size::new(100, 100));
+    let mut button: Button<Rgb888> = Button::new("test", Point::zero(), Size::new(100, 100));
 
     let rect = Rectangle::new(Point::zero(), Size::new(100, 100)).into_styled(
         PrimitiveStyleBuilder::new()
@@ -24,12 +25,47 @@ fn main() -> Result<(), core::convert::Infallible> {
             .stroke_width(2)
             .build(),
     );
-    LinearLayout::horizontal(Chain::new(rect).append(button))
-        .arrange()
-        .align_to(&display_area, horizontal::Center, vertical::Center)
-        .draw(&mut display)
-        .unwrap();
 
-    Window::new("LinearLayout exmaple", &output_settings).show_static(&display);
+    button.draw(&mut display)?;
+    window.update(&display);
+    'running: loop {
+        for event in window.events() {
+            match event {
+                embedded_graphics_simulator::SimulatorEvent::KeyUp {
+                    keycode,
+                    keymod,
+                    repeat,
+                } => {}
+                embedded_graphics_simulator::SimulatorEvent::KeyDown {
+                    keycode,
+                    keymod,
+                    repeat,
+                } => {
+                    if keycode == Keycode::Q {
+                        break 'running;
+                    }
+                }
+                embedded_graphics_simulator::SimulatorEvent::MouseButtonUp { mouse_btn, point } => {
+                    button.handle_event(embui::InputEvent::MouseUp(point));
+                }
+                embedded_graphics_simulator::SimulatorEvent::MouseButtonDown {
+                    mouse_btn,
+                    point,
+                } => {
+                    button.handle_event(InputEvent::MouseDown(point));
+                }
+                embedded_graphics_simulator::SimulatorEvent::MouseWheel {
+                    scroll_delta,
+                    direction,
+                } => {}
+                embedded_graphics_simulator::SimulatorEvent::MouseMove { point } => {
+                    button.handle_event(embui::InputEvent::MouseMove(point));
+                }
+                embedded_graphics_simulator::SimulatorEvent::Quit => {}
+            }
+        }
+        button.draw(&mut display)?;
+        window.update(&display);
+    }
     Ok(())
 }
