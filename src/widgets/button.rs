@@ -1,11 +1,8 @@
 use core::marker::PhantomData;
 
 use crate::{
+    StateManager, Widget, WidgetState,
     themes::{DefaultTheme, Theme},
-    widgets::{
-        Widget,
-        state::{StateManager, WidgetState},
-    },
 };
 use embedded_graphics::{
     mono_font::{MonoTextStyle, iso_8859_2::FONT_6X10},
@@ -37,7 +34,7 @@ where
 
 impl<'a, C> Button<'a, C>
 where
-    C: PixelColor + Default + From<Rgb888> + 'static,
+    C: PixelColor + Default + From<Rgb888> + 'a,
 {
     pub fn new(label: &'a str, pos: Point, size: Size) -> Self {
         Self {
@@ -83,34 +80,6 @@ where
             ),
         }
     }
-}
-
-impl<'a, C> Drawable for Button<'a, C>
-where
-    C: PixelColor + From<Rgb888> + Default + 'static,
-{
-    type Color = C;
-    type Output = ();
-
-    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
-    where
-        D: DrawTarget<Color = C>,
-    {
-        // Use a global default theme or a theme stored in the widget
-        let theme = DefaultTheme::<C>::new();
-        self.draw_with_theme(target, &theme)
-    }
-}
-impl<'a, C> Widget<C> for Button<'a, C>
-where
-    C: PixelColor + Default + From<Rgb888> + 'static,
-{
-    fn get_state_manager(&self) -> &StateManager {
-        &self.state_manager
-    }
-    fn get_state_manager_mut(&mut self) -> &mut StateManager {
-        &mut self.state_manager
-    }
     fn draw_with_theme<D, T>(&self, target: &mut D, theme: &T) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = C>,
@@ -136,22 +105,47 @@ where
             .stroke_width(theme.spacing_xs())
             .build();
 
-        let outline = RoundedRectangle::new(
-            Rectangle::new(self.pos, self.size),
-            CornerRadii::new(Size::new(3, 3)),
-        );
+        let outline = Rectangle::new(self.pos, self.size);
 
         outline.draw_styled(&outline_style, target)?;
         label.draw(target)?;
         Ok(())
     }
+}
 
-    fn is_enabled() -> bool {
-        todo!()
+impl<'a, C> Drawable for Button<'a, C>
+where
+    C: PixelColor + From<Rgb888> + Default + 'a,
+{
+    type Color = C;
+    type Output = ();
+
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = C>,
+    {
+        // Use a global default theme or a theme stored in the widget
+        let theme = DefaultTheme::<C>::new();
+        self.draw_with_theme(target, &theme)
+    }
+}
+impl<'a, C> Widget<C> for Button<'a, C>
+where
+    C: PixelColor + Default + From<Rgb888> + 'a,
+{
+    fn get_state_manager(&self) -> &StateManager {
+        &self.state_manager
+    }
+    fn get_state_manager_mut(&mut self) -> &mut StateManager {
+        &mut self.state_manager
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.get_state() != WidgetState::Disabled
     }
 
     fn set_enabled(&mut self, enabled: bool) {
-        todo!()
+        self.set_state(WidgetState::Normal);
     }
 }
 //impl<C> Widget for Button<'_, C> where C: PixelColor + From<BinaryColor> {}

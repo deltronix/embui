@@ -4,10 +4,13 @@ use embedded_graphics::{
     prelude::*,
     primitives::{PrimitiveStyleBuilder, Rectangle},
 };
-use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window, sdl2::Keycode};
+use embedded_graphics_simulator::{
+    OutputSettingsBuilder, SimulatorDisplay, Window,
+    sdl2::{Keycode, MouseButton},
+};
 use embedded_layout::{layout::linear::LinearLayout, prelude::*};
+use embui::Widget;
 use embui::widgets::Button;
-use embui::widgets::Widget;
 use embui::{InputEvent, themes::Theme};
 
 fn main() -> Result<(), core::convert::Infallible> {
@@ -31,37 +34,32 @@ fn main() -> Result<(), core::convert::Infallible> {
     'running: loop {
         for event in window.events() {
             match event {
-                embedded_graphics_simulator::SimulatorEvent::KeyUp {
-                    keycode,
-                    keymod,
-                    repeat,
-                } => {}
-                embedded_graphics_simulator::SimulatorEvent::KeyDown {
-                    keycode,
-                    keymod,
-                    repeat,
-                } => {
+                embedded_graphics_simulator::SimulatorEvent::KeyUp { .. } => {}
+                embedded_graphics_simulator::SimulatorEvent::KeyDown { keycode, .. } => {
                     if keycode == Keycode::Q {
                         break 'running;
                     }
                 }
                 embedded_graphics_simulator::SimulatorEvent::MouseButtonUp { mouse_btn, point } => {
-                    button.handle_event(embui::InputEvent::MouseUp(point));
+                    if mouse_btn == MouseButton::Left {
+                        button.handle_event(embui::InputEvent::MouseUp(point));
+                    }
                 }
                 embedded_graphics_simulator::SimulatorEvent::MouseButtonDown {
                     mouse_btn,
                     point,
                 } => {
-                    button.handle_event(InputEvent::MouseDown(point));
+                    if mouse_btn == MouseButton::Left {
+                        button.handle_event(InputEvent::MouseDown(point));
+                    }
                 }
-                embedded_graphics_simulator::SimulatorEvent::MouseWheel {
-                    scroll_delta,
-                    direction,
-                } => {}
+                embedded_graphics_simulator::SimulatorEvent::MouseWheel { .. } => {}
                 embedded_graphics_simulator::SimulatorEvent::MouseMove { point } => {
                     button.handle_event(embui::InputEvent::MouseMove(point));
                 }
-                embedded_graphics_simulator::SimulatorEvent::Quit => {}
+                embedded_graphics_simulator::SimulatorEvent::Quit => {
+                    break 'running;
+                }
             }
         }
         button.draw(&mut display)?;

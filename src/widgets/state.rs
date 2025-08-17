@@ -1,4 +1,4 @@
-use crate::events::input::InputEvent;
+use crate::InputEvent;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WidgetState {
