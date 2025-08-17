@@ -11,6 +11,8 @@ use heapless::{FnvIndexMap, Vec};
 pub use themes::Theme;
 pub use widgets::{StateManager, WidgetState};
 
+use crate::themes::DefaultTheme;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputEvent {
     Touch(Point),
@@ -33,15 +35,15 @@ impl WidgetId {
     }
 }
 
-pub struct WidgetNode<C: PixelColor> {
+pub struct WidgetNode<C: PixelColor, D: DrawTarget<Color = C>> {
     id: WidgetId,
     parent: WidgetId,
     children: Vec<WidgetId, 8>,
-    widget: Option<Box<dyn Widget<C>>>,
+    widget: Option<Box<dyn Widget<C, D>>>,
     visible: bool,
     pub bounds: Rectangle,
 }
-impl<C: PixelColor> WidgetNode<C> {
+impl<C: PixelColor, D: DrawTarget<Color = C>> WidgetNode<C, D> {
     fn new(id: WidgetId, parent: WidgetId) -> Self {
         Self {
             id,
@@ -52,7 +54,7 @@ impl<C: PixelColor> WidgetNode<C> {
             bounds: Rectangle::zero(),
         }
     }
-    fn with_widget(id: WidgetId, parent: WidgetId, widget: Box<dyn Widget<C>>) -> Self {
+    fn with_widget(id: WidgetId, parent: WidgetId, widget: Box<dyn Widget<C, D>>) -> Self {
         let bounds = widget.bounding_box();
         Self {
             id,
@@ -64,7 +66,7 @@ impl<C: PixelColor> WidgetNode<C> {
         }
     }
     /// Get absolute bounds (including parent transforms)
-    pub fn absolute_bounds(&self, tree: &WidgetTree<C>) -> Rectangle {
+    pub fn absolute_bounds(&self, tree: &WidgetTree<C, D>) -> Rectangle {
         if self.parent == WidgetId::INVALID {
             return self.bounds;
         }
@@ -86,13 +88,19 @@ impl<C: PixelColor> WidgetNode<C> {
     }
 }
 /// Widget tree for managing hierarchical UI
-pub struct WidgetTree<C: PixelColor> {
-    nodes: Vec<WidgetNode<C>, 32>, // Max 32 widgets per screen
+pub struct WidgetTree<C: PixelColor, D: DrawTarget<Color = C>> {
+    nodes: Vec<WidgetNode<C, D>, 32>, // Max 32 widgets per screen
     next_id: u16,
     root_id: WidgetId,
 }
 
-impl<C: PixelColor> WidgetTree<C> {
+impl<C: PixelColor, D: DrawTarget<Color = C, Error = ()>> Default for WidgetTree<C, D> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<C: PixelColor, D: DrawTarget<Color = C>> WidgetTree<C, D> {
     pub fn new() -> Self {
         let mut tree = Self {
             nodes: Vec::new(),
@@ -101,7 +109,7 @@ impl<C: PixelColor> WidgetTree<C> {
         };
 
         // Create root node
-        let root_node = WidgetNode::new(WidgetId::ROOT, WidgetId::INVALID);
+        let root_node = WidgetNode::<C, D>::new(WidgetId::ROOT, WidgetId::INVALID);
         tree.nodes.push(root_node).ok();
 
         tree
@@ -111,10 +119,10 @@ impl<C: PixelColor> WidgetTree<C> {
     pub fn add_widget(
         &mut self,
         parent_id: WidgetId,
-        widget: Box<dyn Widget<C>>,
-    ) -> Result<WidgetId, ()> {
+        widget: Box<dyn Widget<C, D>>,
+    ) -> Result<WidgetId, &str> {
         if self.nodes.is_full() {
-            return Err(());
+            return Err("nodes full");
         }
 
         let widget_id = WidgetId::new(self.next_id);
@@ -126,14 +134,14 @@ impl<C: PixelColor> WidgetTree<C> {
         // Add to parent's children list
         if let Some(parent) = self.get_node_mut(parent_id) {
             if parent.children.push(widget_id).is_err() {
-                return Err(()); // Parent is full
+                return Err("parent full"); // Parent is full
             }
         } else {
-            return Err(()); // Parent doesn't exist
+            return Err("parent doesn't exist"); // Parent doesn't exist
         }
 
         // Add node to tree
-        self.nodes.push(widget_node).map_err(|_| ())?;
+        self.nodes.push(widget_node).map_err(|_| ());
 
         Ok(widget_id)
     }
@@ -151,7 +159,7 @@ impl<C: PixelColor> WidgetTree<C> {
         let container_id = WidgetId::new(self.next_id);
         self.next_id += 1;
 
-        let mut container_node = WidgetNode::new(container_id, parent_id);
+        let mut container_node = WidgetNode::<C, D>::new(container_id, parent_id);
         container_node.bounds = bounds;
 
         // Add to parent's children list
@@ -203,23 +211,31 @@ impl<C: PixelColor> WidgetTree<C> {
     }
 
     /// Get a node by ID
-    pub fn get_node(&self, id: WidgetId) -> Option<&WidgetNode<C>> {
+    pub fn get_node(&self, id: WidgetId) -> Option<&WidgetNode<C, D>> {
         self.nodes.iter().find(|n| n.id == id)
     }
 
     /// Get a mutable node by ID
-    pub fn get_node_mut(&mut self, id: WidgetId) -> Option<&mut WidgetNode<C>> {
+    pub fn get_node_mut(&mut self, id: WidgetId) -> Option<&mut WidgetNode<C, D>> {
         self.nodes.iter_mut().find(|n| n.id == id)
     }
 
     /// Get widget by ID
-    pub fn get_widget(&self, id: WidgetId) -> Option<&dyn Widget<C>> {
+    pub fn get_widget(&self, id: WidgetId) -> Option<&dyn Widget<C, D>> {
         self.get_node(id)?.widget.as_ref().map(|w| w.as_ref())
     }
 
     /// Get mutable widget by ID
-    pub fn get_widget_mut(&mut self, id: WidgetId) -> Option<&mut dyn Widget<C>> {
-        self.get_node_mut(id)?.widget.as_mut().map(|w| w.as_mut())
+    pub fn get_widget_mut(&mut self, id: WidgetId, f: &dyn Fn(&mut dyn Widget<C, D>)) {
+        match self.get_node_mut(id) {
+            None => {}
+            Some(node) => {
+                if let Some(w) = node.widget.as_mut() {
+                    f(w.as_mut());
+                }
+            }
+        }
+        //self.get_node_mut(id)?.widget.as_mut().map(|w| w.as_mut())
     }
 
     /// Set widget visibility
@@ -249,7 +265,21 @@ impl<C: PixelColor> WidgetTree<C> {
 
         true
     }
+    fn draw_all(&mut self, target: &mut D, theme: &dyn Theme<C>) {
+        for node in &self.nodes {
+            if let Some(w) = node.widget.as_ref() {
+                w.draw_with_theme(target, theme);
+            }
+        }
+    }
 
+    pub fn handle_event(&mut self, event: InputEvent) {
+        for node in &mut self.nodes {
+            if let Some(node) = &mut node.widget {
+                if node.as_mut().handle_event(event) {}
+            }
+        }
+    }
     /// Find widget at point (top-most visible widget)
     pub fn hit_test(&self, point: Point) -> Option<WidgetId> {
         self.hit_test_recursive(self.root_id, point)
@@ -287,22 +317,8 @@ impl<C: PixelColor> WidgetTree<C> {
     }
 }
 
-pub struct Container<C: PixelColor> {
-    widgets: heapless::FnvIndexMap<WidgetId, Box<dyn Widget<C>>, 32>,
-}
-
-impl<C: PixelColor> Container<C> {
-    fn new() -> Self {
-        Self {
-            widgets: FnvIndexMap::new(),
-        }
-    }
-}
-
-pub trait Widget<C: PixelColor>: Dimensions {
-    fn is_enabled(&self) -> bool;
-    fn set_enabled(&mut self, enabled: bool);
-
+pub trait Widget<C: PixelColor, D: DrawTarget<Color = C>>: Dimensions {
+    fn draw_with_theme(&self, target: &mut D, theme: &dyn Theme<C>) -> Result<(), ()>;
     fn handle_event(&mut self, event: InputEvent) -> bool {
         let contains_point = match event {
             InputEvent::Touch(point)

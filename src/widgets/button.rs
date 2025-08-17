@@ -51,8 +51,32 @@ where
         self.on_click = Some(callback);
         self
     }
-    fn get_colors_for_state<T: Theme<C>>(&self, theme: &T) -> (C, C, C) {
-        match self.get_state() {
+}
+
+impl<'a, C> Drawable for Button<'a, C>
+where
+    C: PixelColor + From<Rgb888> + Default + 'a,
+{
+    type Color = C;
+    type Output = ();
+
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = C>,
+    {
+        // Use a global default theme or a theme stored in the widget
+        let theme = DefaultTheme::<C>::new();
+        self.draw_with_theme(target, &theme);
+        Ok(())
+    }
+}
+impl<'a, C, D> Widget<C, D> for Button<'a, C>
+where
+    C: PixelColor + Default + From<Rgb888> + 'a,
+    D: DrawTarget<Color = C>,
+{
+    fn draw_with_theme(&self, target: &mut D, theme: &dyn Theme<C>) -> Result<(), ()> {
+        let (background_color, text_color, border_color) = match Widget::<C, D>::get_state(self) {
             WidgetState::Normal => (
                 theme.button_normal_bg(),
                 theme.button_normal_text(),
@@ -78,20 +102,13 @@ where
                 theme.button_disabled_text(),
                 theme.button_disabled_border(),
             ),
-        }
-    }
-    fn draw_with_theme<D, T>(&self, target: &mut D, theme: &T) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = C>,
-        T: Theme<C>,
-    {
-        let (background_color, text_color, border_color) = self.get_colors_for_state(theme);
+        };
         let textbox_style = TextBoxStyleBuilder::new()
             .height_mode(HeightMode::FitToText)
             .alignment(HorizontalAlignment::Center)
             .paragraph_spacing(6)
             .build();
-        let character_style = MonoTextStyle::new(T::normal_font(), text_color);
+        let character_style = MonoTextStyle::new(theme.normal_font(), text_color);
         let label = TextBox::with_textbox_style(
             self.label,
             self.bounding_box(),
@@ -107,47 +124,18 @@ where
 
         let outline = Rectangle::new(self.pos, self.size);
 
-        outline.draw_styled(&outline_style, target)?;
-        label.draw(target)?;
+        let _ = outline.draw_styled(&outline_style, target);
+        let _ = label.draw(target);
         Ok(())
     }
-}
-
-impl<'a, C> Drawable for Button<'a, C>
-where
-    C: PixelColor + From<Rgb888> + Default + 'a,
-{
-    type Color = C;
-    type Output = ();
-
-    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
-    where
-        D: DrawTarget<Color = C>,
-    {
-        // Use a global default theme or a theme stored in the widget
-        let theme = DefaultTheme::<C>::new();
-        self.draw_with_theme(target, &theme)
-    }
-}
-impl<'a, C> Widget<C> for Button<'a, C>
-where
-    C: PixelColor + Default + From<Rgb888> + 'a,
-{
     fn get_state_manager(&self) -> &StateManager {
         &self.state_manager
     }
     fn get_state_manager_mut(&mut self) -> &mut StateManager {
         &mut self.state_manager
     }
-
-    fn is_enabled(&self) -> bool {
-        self.get_state() != WidgetState::Disabled
-    }
-
-    fn set_enabled(&mut self, enabled: bool) {
-        self.set_state(WidgetState::Normal);
-    }
 }
+
 //impl<C> Widget for Button<'_, C> where C: PixelColor + From<BinaryColor> {}
 
 impl<C> Transform for Button<'_, C>
