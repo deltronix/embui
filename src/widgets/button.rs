@@ -15,8 +15,8 @@ use embedded_graphics::{
 };
 use embedded_text::{
     TextBox,
-    alignment::HorizontalAlignment,
-    style::{HeightMode, TextBoxStyleBuilder},
+    alignment::{HorizontalAlignment, VerticalAlignment},
+    style::{HeightMode, TextBoxStyleBuilder, VerticalOverdraw},
 };
 
 #[derive(Clone, Debug)]
@@ -104,8 +104,9 @@ where
             ),
         };
         let textbox_style = TextBoxStyleBuilder::new()
-            .height_mode(HeightMode::FitToText)
+            .height_mode(HeightMode::Exact(VerticalOverdraw::Hidden))
             .alignment(HorizontalAlignment::Center)
+            .vertical_alignment(VerticalAlignment::Middle)
             .paragraph_spacing(6)
             .build();
         let character_style = MonoTextStyle::new(theme.normal_font(), text_color);
@@ -122,7 +123,7 @@ where
             .stroke_width(theme.spacing_xs())
             .build();
 
-        let outline = Rectangle::new(self.pos, self.size);
+        let outline = Rectangle::new(self.pos + Point::new(2, 2), self.size - Size::new(4, 4));
 
         let _ = outline.draw_styled(&outline_style, target);
         let _ = label.draw(target);
@@ -133,6 +134,9 @@ where
     }
     fn get_state_manager_mut(&mut self) -> &mut StateManager {
         &mut self.state_manager
+    }
+    fn get_callback(&self) -> Option<fn()> {
+        self.on_click
     }
 }
 

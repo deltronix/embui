@@ -1,18 +1,13 @@
 use crate::InputEvent;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum WidgetState {
+    #[default]
     Normal,
     Hovered,
     Pressed,
     Focused,
     Disabled,
-}
-
-impl Default for WidgetState {
-    fn default() -> Self {
-        WidgetState::Normal
-    }
 }
 
 impl WidgetState {

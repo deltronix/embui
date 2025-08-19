@@ -5,13 +5,14 @@ extern crate alloc;
 use alloc::boxed::Box;
 use embedded_graphics::{prelude::*, primitives::Rectangle};
 
+pub mod screen;
 pub mod themes;
 pub mod widgets;
 use heapless::{FnvIndexMap, Vec};
 pub use themes::Theme;
 pub use widgets::{StateManager, WidgetState};
 
-use crate::themes::DefaultTheme;
+use crate::{themes::DefaultTheme, widgets::state};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputEvent {
@@ -34,7 +35,6 @@ impl WidgetId {
         WidgetId(id)
     }
 }
-
 pub struct WidgetNode<C: PixelColor, D: DrawTarget<Color = C>> {
     id: WidgetId,
     parent: WidgetId,
@@ -88,6 +88,7 @@ impl<C: PixelColor, D: DrawTarget<Color = C>> WidgetNode<C, D> {
     }
 }
 /// Widget tree for managing hierarchical UI
+///
 pub struct WidgetTree<C: PixelColor, D: DrawTarget<Color = C>> {
     nodes: Vec<WidgetNode<C, D>, 32>, // Max 32 widgets per screen
     next_id: u16,
@@ -316,7 +317,6 @@ impl<C: PixelColor, D: DrawTarget<Color = C>> WidgetTree<C, D> {
         }
     }
 }
-
 pub trait Widget<C: PixelColor, D: DrawTarget<Color = C>>: Dimensions {
     fn draw_with_theme(&self, target: &mut D, theme: &dyn Theme<C>) -> Result<(), ()>;
     fn handle_event(&mut self, event: InputEvent) -> bool {
@@ -335,6 +335,12 @@ pub trait Widget<C: PixelColor, D: DrawTarget<Color = C>>: Dimensions {
 
         let widget_handled = self.handle_event_impl(event, contains_point);
 
+        if state_changed && self.get_state() == WidgetState::Pressed {
+            if let Some(f) = self.get_callback() {
+                f()
+            }
+        }
+
         state_changed || widget_handled
     }
 
@@ -346,6 +352,7 @@ pub trait Widget<C: PixelColor, D: DrawTarget<Color = C>>: Dimensions {
         self.get_state_manager_mut().set_state(state)
     }
 
+    fn get_callback(&self) -> Option<fn()>;
     fn get_state_manager(&self) -> &StateManager;
     fn get_state_manager_mut(&mut self) -> &mut StateManager;
 
