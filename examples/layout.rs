@@ -3,6 +3,9 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, Window,
     sdl2::{Keycode, MouseButton},
 };
+use embedded_layout::{
+    align::{horizontal, vertical, Align}, layout::linear::LinearLayout, prelude::Chain, ViewGroup
+};
 use embui::{
     InputEvent, Response, ThemedWidget, Widget,
     screen::{Draw, Element},
@@ -22,6 +25,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         Increment,
         Decrement,
     }
+    #[derive(ViewGroup)]
     struct Model<'a> {
         counter: Number<Message>,
         inc_button: Button<'a, Message>,
@@ -30,6 +34,9 @@ fn main() -> Result<(), core::convert::Infallible> {
     impl Model<'_> {
         fn handle_event(&mut self, event: InputEvent) {
             if let Response::Changed(Some(msg)) = self.inc_button.handle_event(event) {
+                self.update(msg)
+            }
+            if let Response::Changed(Some(msg)) = self.counter.handle_event(event) {
                 self.update(msg)
             }
             if let Response::Changed(Some(msg)) = self.dec_button.handle_event(event) {
@@ -54,11 +61,15 @@ fn main() -> Result<(), core::convert::Infallible> {
         }
     }
 
-    let mut model = Model {
-        counter: Number::new(Point::new(0, 64), Size::new(64, 64)),
-        inc_button: Button::new("+").on_press(Message::Increment),
+     let chain =  Chain::new(Number::new(Point::new(0, 64), Size::new(64, 64))).append(
+        _button: Button::new("+").on_press(Message::Increment))
         dec_button: Button::new("-").on_press(Message::Decrement),
-    };
+
+    LinearLayout::vertical(model)
+        .with_alignment(horizontal::Center)
+        .arrange()
+        .align_to_mut(display.bounding_box(), horizontal::Center, vertical::Center)
+        .draw();
 
     window.update(&display);
     'running: loop {
@@ -100,7 +111,7 @@ fn main() -> Result<(), core::convert::Infallible> {
                 model.handle_event(ev);
             }
         }
-        model.view().iter().draw_all(&mut display, &theme)?;
+        //model.view().iter().draw_all(&mut display, &theme)?;
         window.update(&display);
     }
     Ok(())

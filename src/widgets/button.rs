@@ -126,13 +126,13 @@ where
         Ok(())
     }
 }
-// impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M>
-// where
-//     D: DrawTarget<Color = C>,
-//     C: PixelColor + Default + From<Rgb888>,
-//     T: Theme<C>,
-// {
-// }
+impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M>
+where
+    D: DrawTarget<Color = C>,
+    C: PixelColor + Default + From<Rgb888>,
+    T: Theme<C>,
+{
+}
 
 impl<M> Transform for Button<'_, M>
 where
