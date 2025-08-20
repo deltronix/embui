@@ -20,6 +20,12 @@ impl<C: PixelColor> DefaultTheme<C> {
     }
 }
 
+impl<C: PixelColor> Default for DefaultTheme<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<C> Theme<C> for DefaultTheme<C>
 where
     C: PixelColor + From<Rgb888>,
