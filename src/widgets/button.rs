@@ -14,6 +14,7 @@ use embedded_graphics::{
         StyledDrawable,
     },
 };
+use embedded_layout::View;
 use embedded_text::{
     TextBox,
     alignment::{HorizontalAlignment, VerticalAlignment},
@@ -23,18 +24,18 @@ use embedded_text::{
 #[derive(Clone, Debug)]
 pub struct Button<'a, M: Copy + Clone> {
     label: &'a str,
-    pos: Point,
-    size: Size,
+    pos: Option<Point>,
+    size: Option<Size>,
     on_press: Option<M>,
     state_manager: StateManager,
 }
 
 impl<'a, M: Copy + Clone> Button<'a, M> {
-    pub fn new(label: &'a str, pos: Point, size: Size) -> Self {
+    pub fn new(label: &'a str) -> Self {
         Self {
             label,
-            pos,
-            size,
+            pos: None,
+            size: None,
             on_press: None,
             state_manager: StateManager::default(),
         }
@@ -60,7 +61,6 @@ impl<M: Copy + Clone> Widget<M> for Button<'_, M> {
         &mut self.state_manager
     }
 }
-
 impl<D, T, C, M> ThemedWidget<D, T, C> for Button<'_, M>
 where
     C: PixelColor + Default + From<Rgb888>,
@@ -116,32 +116,45 @@ where
             .stroke_width(theme.spacing_xs())
             .build();
 
-        let outline = Rectangle::new(self.pos + Point::new(2, 2), self.size - Size::new(4, 4));
+        let outline = Rectangle::new(
+            self.pos.unwrap_or(Point::zero()) + Point::new(2, 2),
+            self.size.unwrap_or(Size::new(16, 16)) - Size::new(4, 4),
+        );
 
         outline.draw_styled(&outline_style, target)?;
         label.draw(target)?;
         Ok(())
     }
 }
-impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M>
-where
-    D: DrawTarget<Color = C>,
-    C: PixelColor + Default + From<Rgb888>,
-    T: Theme<C>,
-{
-}
+// impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M>
+// where
+//     D: DrawTarget<Color = C>,
+//     C: PixelColor + Default + From<Rgb888>,
+//     T: Theme<C>,
+// {
+// }
+
 impl<M> Transform for Button<'_, M>
 where
     M: Copy + Clone,
 {
     fn translate(&self, by: Point) -> Self {
         let mut new_button = self.clone();
-        new_button.pos += by;
+        if let Some(pos) = new_button.pos {
+            new_button.pos = Some(pos + by)
+        } else {
+            new_button.pos = Some(by)
+        }
         new_button
     }
 
     fn translate_mut(&mut self, by: Point) -> &mut Self {
-        self.pos += by;
+        if let Some(pos) = self.pos {
+            self.pos = Some(pos + by)
+        } else {
+            self.pos = Some(by)
+        }
+
         self
     }
 }
@@ -151,6 +164,8 @@ where
     M: Copy + Clone,
 {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.pos, self.size)
+        let pos = self.pos.unwrap_or(Point::zero());
+        let size = self.size.unwrap_or(Size::new(16, 16));
+        Rectangle::new(pos, size)
     }
 }

@@ -16,7 +16,7 @@ use embedded_text::{
 };
 
 use crate::{StateManager, Theme, ThemedWidget, Widget, WidgetState, screen::Element};
-
+#[derive(Clone)]
 pub struct Number<M>
 where
     M: Copy + Clone,
@@ -44,7 +44,18 @@ impl<M: Copy> Number<M> {
         self.number
     }
 }
+impl<M: Copy + Clone> Transform for Number<M> {
+    fn translate(&self, by: Point) -> Self {
+        let mut new_number = self.clone();
+        new_number.pos += by;
+        new_number
+    }
 
+    fn translate_mut(&mut self, by: Point) -> &mut Self {
+        self.pos += by;
+        self
+    }
+}
 impl<M: Copy> Widget<M> for Number<M> {
     fn to_message(&self) -> Option<M> {
         None
@@ -58,6 +69,7 @@ impl<M: Copy> Widget<M> for Number<M> {
         &mut self.state_manager
     }
 }
+
 impl<D, T, C, M> ThemedWidget<D, T, C> for Number<M>
 where
     C: PixelColor + Default + From<Rgb888>,
