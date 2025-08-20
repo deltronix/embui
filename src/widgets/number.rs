@@ -1,18 +1,13 @@
-use core::marker::PhantomData;
-
-use crate::{
-    Response, StateManager, ThemedWidget, Widget, WidgetState,
-    screen::Element,
-    themes::{DefaultTheme, Theme},
+use core::{
+    fmt::{Write, write},
+    marker::PhantomData,
 };
+
 use embedded_graphics::{
-    mono_font::{MonoTextStyle, iso_8859_2::FONT_6X10},
-    pixelcolor::{BinaryColor, Rgb888},
+    mono_font::MonoTextStyle,
+    pixelcolor::Rgb888,
     prelude::*,
-    primitives::{
-        CornerRadii, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, RoundedRectangle,
-        StyledDrawable,
-    },
+    primitives::{PrimitiveStyleBuilder, Rectangle, StyledDrawable},
 };
 use embedded_text::{
     TextBox,
@@ -20,48 +15,50 @@ use embedded_text::{
     style::{HeightMode, TextBoxStyleBuilder, VerticalOverdraw},
 };
 
-#[derive(Clone, Debug)]
-pub struct Button<'a, M: Copy + Clone> {
-    label: &'a str,
+use crate::{StateManager, Theme, ThemedWidget, Widget, WidgetState, screen::Element};
+
+pub struct Number<M>
+where
+    M: Copy + Clone,
+{
+    ph: PhantomData<M>,
+    number: i32,
+    state_manager: StateManager,
     pos: Point,
     size: Size,
-    on_press: Option<M>,
-    state_manager: StateManager,
 }
-
-impl<'a, M: Copy + Clone> Button<'a, M> {
-    pub fn new(label: &'a str, pos: Point, size: Size) -> Self {
+impl<M: Copy> Number<M> {
+    pub fn new(pos: Point, size: Size) -> Self {
         Self {
-            label,
+            ph: PhantomData,
+            number: 0,
+            state_manager: StateManager::new(),
             pos,
             size,
-            on_press: None,
-            state_manager: StateManager::default(),
         }
     }
-
-    pub fn on_press(mut self, msg: M) -> Self {
-        self.on_press = Some(msg);
-        self
+    pub fn set(&mut self, number: i32) {
+        self.number = number;
+    }
+    pub fn get(&self) -> i32 {
+        self.number
     }
 }
 
-impl<M: Copy + Clone> Widget<M> for Button<'_, M> {
+impl<M: Copy> Widget<M> for Number<M> {
     fn to_message(&self) -> Option<M> {
-        match self.get_state() {
-            WidgetState::Pressed => self.on_press,
-            _ => None,
-        }
+        None
     }
-    fn get_state_manager(&self) -> &StateManager {
+
+    fn get_state_manager(&self) -> &super::StateManager {
         &self.state_manager
     }
-    fn get_state_manager_mut(&mut self) -> &mut StateManager {
+
+    fn get_state_manager_mut(&mut self) -> &mut super::StateManager {
         &mut self.state_manager
     }
 }
-
-impl<D, T, C, M> ThemedWidget<D, T, C> for Button<'_, M>
+impl<D, T, C, M> ThemedWidget<D, T, C> for Number<M>
 where
     C: PixelColor + Default + From<Rgb888>,
     D: DrawTarget<Color = C>,
@@ -103,8 +100,12 @@ where
             .paragraph_spacing(6)
             .build();
         let character_style = MonoTextStyle::new(theme.normal_font(), text_color);
+
+        let mut text: heapless::String<8> = heapless::String::new();
+
+        write!(&mut text, "{}", self.number).unwrap();
         let label = TextBox::with_textbox_style(
-            self.label,
+            text.as_str(),
             self.bounding_box(),
             character_style,
             textbox_style,
@@ -123,34 +124,19 @@ where
         Ok(())
     }
 }
-impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M>
+impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Number<M>
 where
+    M: Copy + Clone,
     D: DrawTarget<Color = C>,
     C: PixelColor + Default + From<Rgb888>,
     T: Theme<C>,
 {
 }
-impl<M> Transform for Button<'_, M>
+impl<M> Dimensions for Number<M>
 where
     M: Copy + Clone,
 {
-    fn translate(&self, by: Point) -> Self {
-        let mut new_button = self.clone();
-        new_button.pos += by;
-        new_button
-    }
-
-    fn translate_mut(&mut self, by: Point) -> &mut Self {
-        self.pos += by;
-        self
-    }
-}
-
-impl<M> Dimensions for Button<'_, M>
-where
-    M: Copy + Clone,
-{
-    fn bounding_box(&self) -> Rectangle {
+    fn bounding_box(&self) -> embedded_graphics::primitives::Rectangle {
         Rectangle::new(self.pos, self.size)
     }
 }

@@ -3,34 +3,63 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, Window,
     sdl2::{Keycode, MouseButton},
 };
-use embui::widgets::Button;
-use embui::{InputEvent, screen::Screen, themes::DefaultTheme};
+use embui::{
+    InputEvent, Response, ThemedWidget, Widget,
+    screen::{Draw, Element},
+    themes::DefaultTheme,
+    widgets::Number,
+};
+use embui::{Theme, widgets::Button};
 
 fn main() -> Result<(), core::convert::Infallible> {
     let mut display: SimulatorDisplay<Rgb888> = SimulatorDisplay::new(Size::new(320, 240));
     let output_settings = OutputSettingsBuilder::new().scale(4).build();
     let mut window = Window::new("buttons.rs", &output_settings);
 
-    let theme = DefaultTheme::new();
-    let mut counter: i32 = 0;
-    let button: Box<Button<Rgb888>> = Box::new(
-        Button::new("test", Point::zero(), Size::new(100, 100)).with_callback(|| {
-            println!("Pressed button 1");
-        }),
-    );
+    let theme = DefaultTheme::<Rgb888>::new();
+    #[derive(Clone, Copy)]
+    enum Message {
+        Increment,
+        Decrement,
+    }
+    struct Model<'a> {
+        counter: Number<Message>,
+        inc_button: Button<'a, Message>,
+        dec_button: Button<'a, Message>,
+    }
+    impl Model<'_> {
+        fn handle_event(&mut self, event: InputEvent) {
+            if let Response::Changed(Some(msg)) = self.inc_button.handle_event(event) {
+                self.update(msg)
+            }
+            if let Response::Changed(Some(msg)) = self.dec_button.handle_event(event) {
+                self.update(msg)
+            }
+        }
+        fn update(&mut self, msg: Message) {
+            match msg {
+                Message::Increment => {
+                    self.counter.set(self.counter.get() + 1);
+                }
+                Message::Decrement => {
+                    self.counter.set(self.counter.get() - 1);
+                }
+            }
+        }
+        fn view(
+            &self,
+        ) -> [&dyn Element<Message, SimulatorDisplay<Rgb888>, DefaultTheme<Rgb888>, Rgb888>; 3]
+        {
+            [&self.inc_button, &self.counter, &self.dec_button]
+        }
+    }
 
-    let button2: Box<Button<Rgb888>> = Box::new(
-        Button::new("test2", Point::new(100, 100), Size::new(100, 100))
-            .with_callback(|| println!("Pressed button 2")),
-    );
-
-    let mut screen: Screen<Rgb888, SimulatorDisplay<Rgb888>> =
-        Screen::new(Rectangle::new(Point::zero(), Size::new(320, 240)));
-    let top = screen
-        .add_container(Rectangle::new(Point::zero(), Size::new(320, 100)))
-        .unwrap();
-    screen.add_widget_to_parent(top, button).unwrap();
-    screen.add_widget_to_parent(top, button2).unwrap();
+    let mut model = Model {
+        counter: Number::new(Point::new(0, 64), Size::new(64, 64)),
+        inc_button: Button::new("+", Point::zero(), Size::new(64, 64)).on_press(Message::Increment),
+        dec_button: Button::new("-", Point::new(0, 128), Size::new(64, 64))
+            .on_press(Message::Decrement),
+    };
 
     window.update(&display);
     'running: loop {
@@ -69,10 +98,10 @@ fn main() -> Result<(), core::convert::Infallible> {
                     break 'running;
                 }
             } {
-                screen.handle_event(ev);
+                model.handle_event(ev);
             }
         }
-        screen.draw_with_theme(&mut display, &theme)?;
+        model.view().iter().draw_all(&mut display, &theme)?;
         window.update(&display);
     }
     Ok(())
