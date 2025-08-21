@@ -2,17 +2,14 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use embedded_graphics::{pixelcolor::Rgb888, prelude::*, primitives::Rectangle};
+use embedded_graphics::{pixelcolor::Rgb888, prelude::*};
 
 pub mod screen;
 pub mod themes;
 pub mod widgets;
-use heapless::{FnvIndexMap, Vec};
+use heapless::Vec;
 pub use themes::Theme;
 pub use widgets::{StateManager, WidgetState};
-
-use crate::{themes::DefaultTheme, widgets::state};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputEvent {
@@ -23,7 +20,6 @@ pub enum InputEvent {
     MouseDown(Point),
     MouseUp(Point),
 }
-
 #[derive(Debug, Clone, Copy)]
 pub enum Response<M: Clone + Copy> {
     Changed(Option<M>),
@@ -67,10 +63,58 @@ pub trait Widget<M: Clone + Copy>: Dimensions {
 pub trait ThemedWidget<D: DrawTarget, T: Theme<C>, C: PixelColor + Default + From<Rgb888>> {
     fn draw_with_theme(&self, target: &mut D, theme: &T) -> Result<(), D::Error>;
 }
+
+
+enum Parameter {
+
+}
+
+pub struct Element<'a, M, C> {
+    theme: &'a dyn Theme<C>,
+    widget: &'a mut dyn Widget<M>,
+    parent: Option<&'a Element<'a, M, C>>,
+    children: heapless::Vec<&'a Element<'a, M, C>, 8>,
+}
+
+impl<M, C> Drawable for Element<'_, M, C>
+where
+    C: PixelColor + Default,
+{
+    type Color = C;
+    type Output = ();
+
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color>,
+    {
+        Ok(())
+    }
+}
+
+impl<'a, M, C> Element<'a, M, C> {
+    pub fn new(theme: &'a dyn Theme<C>, widget: &'a mut dyn Widget<M>) -> Self {
+        Self {
+            theme,
+            widget,
+            parent: None,
+            children: Vec::new(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{Element, themes::DefaultTheme, widgets::Button};
+    use embedded_graphics::pixelcolor::Rgb888;
 
     #[test]
-    fn it_works() {}
+    fn it_works() {
+        #[derive(Clone, Copy)]
+        enum Message {
+            Test,
+        }
+        let theme = DefaultTheme::<Rgb888>::new();
+        let mut widget = Button::<Message, Rgb888>::new("test");
+        let n = Element::new(&theme, &mut widget);
+    }
 }

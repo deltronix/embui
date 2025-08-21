@@ -1,6 +1,5 @@
-use embedded_graphics::mono_font::{MonoFont, MonoTextStyle};
+use embedded_graphics::mono_font::MonoFont;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::PrimitiveStyle;
 
 pub trait Theme<C: PixelColor> {
     // Color palette access

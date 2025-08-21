@@ -1,11 +1,8 @@
-use core::slice::{Iter, IterMut};
+pub(crate) use core::slice::Iter;
 
-use crate::themes::DefaultTheme;
-use crate::widgets::Button;
-use crate::{Box, InputEvent, StateManager, Theme, ThemedWidget, Widget, WidgetState};
+use crate::{Theme, ThemedWidget, Widget};
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::Rectangle;
 
 pub trait Element<M, D, T, C>: Widget<M> + ThemedWidget<D, T, C>
 where
@@ -14,16 +11,6 @@ where
     T: Theme<C>,
     C: PixelColor + Default + From<Rgb888>,
 {
-}
-struct Screen<'a, M, C, D, T>
-where
-    M: Copy + Clone,
-    D: DrawTarget<Color = C>,
-    T: Theme<C>,
-    C: PixelColor,
-{
-    widgets: &'a [&'a dyn Element<M, D, T, C>; 32],
-    display: D,
 }
 
 pub trait Draw<D, T, C>

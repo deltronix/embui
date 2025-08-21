@@ -7,7 +7,7 @@ pub mod colors;
 pub mod theme;
 
 pub use theme::Theme;
-
+#[derive(Debug)]
 pub struct DefaultTheme<C: PixelColor> {
     _phantom: core::marker::PhantomData<C>,
 }

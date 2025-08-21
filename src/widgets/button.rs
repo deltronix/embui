@@ -1,20 +1,16 @@
 use core::marker::PhantomData;
 
 use crate::{
-    Response, StateManager, ThemedWidget, Widget, WidgetState,
+    StateManager, ThemedWidget, Widget, WidgetState,
     screen::Element,
     themes::{DefaultTheme, Theme},
 };
 use embedded_graphics::{
-    mono_font::{MonoTextStyle, iso_8859_2::FONT_6X10},
-    pixelcolor::{BinaryColor, Rgb888},
+    mono_font::MonoTextStyle,
+    pixelcolor::Rgb888,
     prelude::*,
-    primitives::{
-        CornerRadii, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, RoundedRectangle,
-        StyledDrawable,
-    },
+    primitives::{PrimitiveStyleBuilder, Rectangle, StyledDrawable},
 };
-use embedded_layout::View;
 use embedded_text::{
     TextBox,
     alignment::{HorizontalAlignment, VerticalAlignment},
@@ -22,7 +18,12 @@ use embedded_text::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Button<'a, M: Copy + Clone> {
+pub struct Button<'a, M, C>
+where
+    M: Copy + Clone,
+    C: PixelColor,
+{
+    ph: PhantomData<C>,
     label: &'a str,
     pos: Option<Point>,
     size: Option<Size>,
@@ -30,9 +31,14 @@ pub struct Button<'a, M: Copy + Clone> {
     state_manager: StateManager,
 }
 
-impl<'a, M: Copy + Clone> Button<'a, M> {
+impl<'a, M, C> Button<'a, M, C>
+where
+    M: Copy + Clone,
+    C: PixelColor,
+{
     pub fn new(label: &'a str) -> Self {
         Self {
+            ph: PhantomData,
             label,
             pos: None,
             size: None,
@@ -45,9 +51,21 @@ impl<'a, M: Copy + Clone> Button<'a, M> {
         self.on_press = Some(msg);
         self
     }
+    pub fn with_size(mut self, size: Size) -> Self {
+        self.size = Some(size);
+        self
+    }
+    pub fn with_position(mut self, pos: Point) -> Self {
+        self.pos = Some(pos);
+        self
+    }
 }
 
-impl<M: Copy + Clone> Widget<M> for Button<'_, M> {
+impl<M, C> Widget<M> for Button<'_, M, C>
+where
+    M: Copy + Clone,
+    C: PixelColor,
+{
     fn to_message(&self) -> Option<M> {
         match self.get_state() {
             WidgetState::Pressed => self.on_press,
@@ -61,7 +79,7 @@ impl<M: Copy + Clone> Widget<M> for Button<'_, M> {
         &mut self.state_manager
     }
 }
-impl<D, T, C, M> ThemedWidget<D, T, C> for Button<'_, M>
+impl<D, T, C, M> ThemedWidget<D, T, C> for Button<'_, M, C>
 where
     C: PixelColor + Default + From<Rgb888>,
     D: DrawTarget<Color = C>,
@@ -126,7 +144,23 @@ where
         Ok(())
     }
 }
-impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M>
+impl<M, C> Drawable for Button<'_, M, C>
+where
+    M: Copy + Clone,
+    C: PixelColor + Default + From<Rgb888>,
+{
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color>,
+    {
+        self.draw_with_theme(target, &DefaultTheme::new())
+    }
+
+    type Color = C;
+
+    type Output = ();
+}
+impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Button<'_, M, C>
 where
     D: DrawTarget<Color = C>,
     C: PixelColor + Default + From<Rgb888>,
@@ -134,9 +168,10 @@ where
 {
 }
 
-impl<M> Transform for Button<'_, M>
+impl<M, C> Transform for Button<'_, M, C>
 where
     M: Copy + Clone,
+    C: PixelColor,
 {
     fn translate(&self, by: Point) -> Self {
         let mut new_button = self.clone();
@@ -159,9 +194,10 @@ where
     }
 }
 
-impl<M> Dimensions for Button<'_, M>
+impl<M, C> Dimensions for Button<'_, M, C>
 where
     M: Copy + Clone,
+    C: PixelColor,
 {
     fn bounding_box(&self) -> Rectangle {
         let pos = self.pos.unwrap_or(Point::zero());

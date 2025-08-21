@@ -27,7 +27,7 @@ impl WidgetState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct StateManager {
     current_state: WidgetState,
     previous_state: WidgetState,

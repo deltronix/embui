@@ -1,7 +1,4 @@
-use core::{
-    fmt::{Write, write},
-    marker::PhantomData,
-};
+use core::{fmt::Write, marker::PhantomData};
 
 use embedded_graphics::{
     mono_font::MonoTextStyle,
@@ -27,6 +24,7 @@ where
     pos: Point,
     size: Size,
 }
+
 impl<M: Copy> Number<M> {
     pub fn new(pos: Point, size: Size) -> Self {
         Self {
@@ -136,6 +134,7 @@ where
         Ok(())
     }
 }
+
 impl<M: Copy + Clone, D, T, C> Element<M, D, T, C> for Number<M>
 where
     M: Copy + Clone,

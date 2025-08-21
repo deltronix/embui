@@ -1,18 +1,12 @@
-use embedded_graphics::{pixelcolor::Rgb888, prelude::*, primitives::Rectangle};
-use embedded_graphics_simulator::{
-    OutputSettingsBuilder, SimulatorDisplay, Window,
-    sdl2::{Keycode, MouseButton},
-};
+use embedded_graphics::{pixelcolor::Rgb888, prelude::*};
+use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 use embedded_layout::{
-    align::{horizontal, vertical, Align}, layout::linear::LinearLayout, prelude::Chain, ViewGroup
+    align::{Align, horizontal, vertical},
+    layout::linear::LinearLayout,
+    prelude::Views,
 };
-use embui::{
-    InputEvent, Response, ThemedWidget, Widget,
-    screen::{Draw, Element},
-    themes::DefaultTheme,
-    widgets::Number,
-};
-use embui::{Theme, widgets::Button};
+use embui::widgets::Button;
+use embui::{ThemedWidget, themes::DefaultTheme};
 
 fn main() -> Result<(), core::convert::Infallible> {
     let mut display: SimulatorDisplay<Rgb888> = SimulatorDisplay::new(Size::new(320, 240));
@@ -25,94 +19,31 @@ fn main() -> Result<(), core::convert::Infallible> {
         Increment,
         Decrement,
     }
-    #[derive(ViewGroup)]
-    struct Model<'a> {
-        counter: Number<Message>,
-        inc_button: Button<'a, Message>,
-        dec_button: Button<'a, Message>,
-    }
-    impl Model<'_> {
-        fn handle_event(&mut self, event: InputEvent) {
-            if let Response::Changed(Some(msg)) = self.inc_button.handle_event(event) {
-                self.update(msg)
-            }
-            if let Response::Changed(Some(msg)) = self.counter.handle_event(event) {
-                self.update(msg)
-            }
-            if let Response::Changed(Some(msg)) = self.dec_button.handle_event(event) {
-                self.update(msg)
-            }
-        }
-        fn update(&mut self, msg: Message) {
-            match msg {
-                Message::Increment => {
-                    self.counter.set(self.counter.get() + 1);
-                }
-                Message::Decrement => {
-                    self.counter.set(self.counter.get() - 1);
-                }
-            }
-        }
-        fn view(
-            &self,
-        ) -> [&dyn Element<Message, SimulatorDisplay<Rgb888>, DefaultTheme<Rgb888>, Rgb888>; 3]
-        {
-            [&self.inc_button, &self.counter, &self.dec_button]
-        }
-    }
 
-     let chain =  Chain::new(Number::new(Point::new(0, 64), Size::new(64, 64))).append(
-        _button: Button::new("+").on_press(Message::Increment))
-        dec_button: Button::new("-").on_press(Message::Decrement),
+    let b: Button<Message, Rgb888> = Button::new("test").with_size(Size::new(32, 32));
+    let mut v = [
+        b.clone().on_press(Message::Increment),
+        b.clone().on_press(Message::Decrement),
+        b.clone(),
+        b.clone(),
+        b.clone(),
+        b.clone(),
+        b.clone(),
+        b.clone(),
+        b.clone(),
+        b.clone(),
+    ];
+    //let n = Number::<Message>::new(Point::new(0, 0), Size::new(32, 32));
+    let views = Views::new(&mut v);
 
-    LinearLayout::vertical(model)
-        .with_alignment(horizontal::Center)
+    LinearLayout::horizontal(views)
         .arrange()
-        .align_to_mut(display.bounding_box(), horizontal::Center, vertical::Center)
-        .draw();
+        .align_to(&display.bounding_box(), horizontal::Center, vertical::Top)
+        .arrange()
+        .inner()
+        .iter()
+        .for_each(|l| l.draw_with_theme(&mut display, &theme).expect("draw error"));
 
-    window.update(&display);
-    'running: loop {
-        for event in window.events() {
-            if let Some(ev) = match event {
-                embedded_graphics_simulator::SimulatorEvent::KeyUp { .. } => None,
-                embedded_graphics_simulator::SimulatorEvent::KeyDown { keycode, .. } => {
-                    if keycode == Keycode::Q {
-                        break 'running;
-                    } else {
-                        None
-                    }
-                }
-                embedded_graphics_simulator::SimulatorEvent::MouseButtonUp { mouse_btn, point } => {
-                    if mouse_btn == MouseButton::Left {
-                        Some(embui::InputEvent::MouseUp(point))
-                    } else {
-                        None
-                    }
-                }
-                embedded_graphics_simulator::SimulatorEvent::MouseButtonDown {
-                    mouse_btn,
-                    point,
-                } => {
-                    if mouse_btn == MouseButton::Left {
-                        Some(InputEvent::MouseDown(point))
-                    } else {
-                        None
-                    }
-                }
-                embedded_graphics_simulator::SimulatorEvent::MouseWheel { .. } => None,
-                embedded_graphics_simulator::SimulatorEvent::MouseMove { point } => {
-                    Some(embui::InputEvent::MouseMove(point))
-                }
-                embedded_graphics_simulator::SimulatorEvent::Quit => {
-                    break 'running;
-                }
-            } {
-                model.handle_event(ev);
-            }
-        }
-        //model.view().iter().draw_all(&mut display, &theme)?;
-        window.update(&display);
-    }
+    window.show_static(&display);
     Ok(())
 }

@@ -1,15 +1,15 @@
-use embedded_graphics::{pixelcolor::Rgb888, prelude::*, primitives::Rectangle};
+use embedded_graphics::{pixelcolor::Rgb888, prelude::*};
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, Window,
     sdl2::{Keycode, MouseButton},
 };
+use embui::widgets::Button;
 use embui::{
-    InputEvent, Response, ThemedWidget, Widget,
+    InputEvent, Response, Widget,
     screen::{Draw, Element},
     themes::DefaultTheme,
     widgets::Number,
 };
-use embui::{Theme, widgets::Button};
 
 fn main() -> Result<(), core::convert::Infallible> {
     let mut display: SimulatorDisplay<Rgb888> = SimulatorDisplay::new(Size::new(320, 240));
@@ -24,12 +24,15 @@ fn main() -> Result<(), core::convert::Infallible> {
     }
     struct Model<'a> {
         counter: Number<Message>,
-        inc_button: Button<'a, Message>,
-        dec_button: Button<'a, Message>,
+        inc_button: Button<'a, Message, Rgb888>,
+        dec_button: Button<'a, Message, Rgb888>,
     }
     impl Model<'_> {
         fn handle_event(&mut self, event: InputEvent) {
             if let Response::Changed(Some(msg)) = self.inc_button.handle_event(event) {
+                self.update(msg)
+            }
+            if let Response::Changed(Some(msg)) = self.counter.handle_event(event) {
                 self.update(msg)
             }
             if let Response::Changed(Some(msg)) = self.dec_button.handle_event(event) {
@@ -56,8 +59,14 @@ fn main() -> Result<(), core::convert::Infallible> {
 
     let mut model = Model {
         counter: Number::new(Point::new(0, 64), Size::new(64, 64)),
-        inc_button: Button::new("+").on_press(Message::Increment),
-        dec_button: Button::new("-").on_press(Message::Decrement),
+        inc_button: Button::new("+")
+            .on_press(Message::Increment)
+            .with_position(Point::new(0, 0))
+            .with_size(Size::new(32, 32)),
+        dec_button: Button::new("-")
+            .on_press(Message::Decrement)
+            .with_position(Point::new(0, 128))
+            .with_size(Size::new(32, 32)),
     };
 
     window.update(&display);
