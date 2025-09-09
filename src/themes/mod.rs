@@ -1,3 +1,5 @@
+use core::fmt::Debug;
+
 use embedded_graphics::mono_font::MonoFont;
 use embedded_graphics::mono_font::ascii::{FONT_4X6, FONT_6X10, FONT_8X13, FONT_10X20};
 use embedded_graphics::pixelcolor::Rgb888;
@@ -28,7 +30,7 @@ impl<C: PixelColor> Default for DefaultTheme<C> {
 
 impl<C> Theme<C> for DefaultTheme<C>
 where
-    C: PixelColor + From<Rgb888>,
+    C: PixelColor + From<Rgb888> + Debug,
 {
     fn primary_color(&self) -> C {
         C::from(Rgb888::CSS_BLUE)

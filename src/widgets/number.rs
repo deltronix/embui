@@ -12,7 +12,7 @@ use embedded_text::{
     style::{HeightMode, TextBoxStyleBuilder, VerticalOverdraw},
 };
 
-use crate::{StateManager, Theme, ThemedWidget, Widget, WidgetState, screen::Element};
+use crate::{StateManager, Stateful, Theme, ThemedWidget, WidgetState, screen::Element};
 #[derive(Clone)]
 pub struct Number<M>
 where
@@ -54,11 +54,7 @@ impl<M: Copy + Clone> Transform for Number<M> {
         self
     }
 }
-impl<M: Copy> Widget<M> for Number<M> {
-    fn to_message(&self) -> Option<M> {
-        None
-    }
-
+impl<M: Copy> Stateful<M> for Number<M> {
     fn get_state_manager(&self) -> &super::StateManager {
         &self.state_manager
     }
@@ -76,7 +72,7 @@ where
     M: Copy,
 {
     fn draw_with_theme(&self, target: &mut D, theme: &T) -> Result<(), <D as DrawTarget>::Error> {
-        let (background_color, text_color, border_color) = match Widget::get_state(self) {
+        let (background_color, text_color, border_color) = match Stateful::get_state(self) {
             WidgetState::Normal => (
                 theme.button_normal_bg(),
                 theme.button_normal_text(),

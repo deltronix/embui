@@ -1,7 +1,67 @@
 use embedded_graphics::mono_font::MonoFont;
 use embedded_graphics::prelude::*;
 
-pub trait Theme<C: PixelColor> {
+use crate::{Element, Widget, WidgetState, widgets::state::Stateful};
+
+struct SimpleStyle<'a, C: PixelColor> {
+    theme: &'a dyn Theme<C>,
+    default_size: Size,
+}
+
+impl<'a, M, C, D> Style<M, C, D> for SimpleStyle<'a, C>
+where
+    M: Copy,
+    C: PixelColor + Default,
+    D: DrawTarget,
+{
+    fn draw_element(&self, element: &Element<M, C>, target: &mut D) {
+        let (widget, theme, state) = (&element.widget, element.theme, element.get_state());
+        match element.widget {
+            Widget::Button { label } => {}
+            Widget::Text { text } => todo!(),
+            Widget::Dial => todo!(),
+            Widget::Fader => todo!(),
+            Widget::Toggle => todo!(),
+        }
+    }
+    fn state_to_colors(&self, state: WidgetState) -> (C, C, C) {
+        match state {
+            WidgetState::Normal => (
+                self.theme.button_normal_bg(),
+                self.theme.button_normal_text(),
+                self.theme.button_normal_border(),
+            ),
+            WidgetState::Hovered => (
+                self.theme.button_hovered_bg(),
+                self.theme.button_hovered_text(),
+                self.theme.button_hovered_border(),
+            ),
+            WidgetState::Pressed => (
+                self.theme.button_pressed_bg(),
+                self.theme.button_pressed_text(),
+                self.theme.button_pressed_border(),
+            ),
+            WidgetState::Focused => (
+                self.theme.button_hovered_bg(),
+                self.theme.button_hovered_text(),
+                self.theme.button_pressed_bg(),
+            ),
+            WidgetState::Disabled => todo!(),
+        }
+    }
+}
+
+pub trait Style<M, C, D>
+where
+    M: Copy,
+    C: PixelColor + Default,
+    D: DrawTarget,
+{
+    fn draw_element(&self, element: &Element<M, C>, target: &mut D);
+    fn state_to_colors(&self, state: WidgetState) -> (C, C, C);
+}
+
+pub trait Theme<C: PixelColor>: core::fmt::Debug {
     // Color palette access
     fn primary_color(&self) -> C;
     fn primary_dark(&self) -> C;

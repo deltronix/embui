@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use crate::{
-    StateManager, ThemedWidget, Widget, WidgetState,
+    StateManager, Stateful, ThemedWidget, WidgetState,
     screen::Element,
     themes::{DefaultTheme, Theme},
 };
@@ -61,17 +61,11 @@ where
     }
 }
 
-impl<M, C> Widget<M> for Button<'_, M, C>
+impl<M, C> Stateful<M> for Button<'_, M, C>
 where
     M: Copy + Clone,
     C: PixelColor,
 {
-    fn to_message(&self) -> Option<M> {
-        match self.get_state() {
-            WidgetState::Pressed => self.on_press,
-            _ => None,
-        }
-    }
     fn get_state_manager(&self) -> &StateManager {
         &self.state_manager
     }
@@ -87,7 +81,7 @@ where
     M: Copy,
 {
     fn draw_with_theme(&self, target: &mut D, theme: &T) -> Result<(), <D as DrawTarget>::Error> {
-        let (background_color, text_color, border_color) = match Widget::get_state(self) {
+        let (background_color, text_color, border_color) = match Stateful::get_state(self) {
             WidgetState::Normal => (
                 theme.button_normal_bg(),
                 theme.button_normal_text(),
@@ -147,7 +141,7 @@ where
 impl<M, C> Drawable for Button<'_, M, C>
 where
     M: Copy + Clone,
-    C: PixelColor + Default + From<Rgb888>,
+    C: PixelColor + Default + From<Rgb888> + core::fmt::Debug,
 {
     fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
     where

@@ -1,10 +1,10 @@
 pub(crate) use core::slice::Iter;
 
-use crate::{Theme, ThemedWidget, Widget};
+use crate::{Stateful, Theme, ThemedWidget};
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::*;
 
-pub trait Element<M, D, T, C>: Widget<M> + ThemedWidget<D, T, C>
+pub trait Element<M, D, T, C>: Stateful<M> + ThemedWidget<D, T, C>
 where
     M: Copy + Clone,
     D: DrawTarget<Color = C>,

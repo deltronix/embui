@@ -5,7 +5,7 @@ use embedded_graphics_simulator::{
 };
 use embui::widgets::Button;
 use embui::{
-    InputEvent, Response, Widget,
+    InputEvent, Response, Stateful,
     screen::{Draw, Element},
     themes::DefaultTheme,
     widgets::Number,

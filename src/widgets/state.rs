@@ -1,5 +1,37 @@
-use crate::InputEvent;
+use crate::{InputEvent, Response};
 
+use embedded_graphics::prelude::Dimensions;
+
+/// A Widget handles events.
+pub trait Stateful<M: Clone + Copy>: Dimensions {
+    fn handle_event(&mut self, event: InputEvent) -> Response<M> {
+        let contains_point = match event {
+            InputEvent::Touch(point)
+            | InputEvent::TouchRelease(point)
+            | InputEvent::MouseMove(point)
+            | InputEvent::MouseDown(point)
+            | InputEvent::MouseUp(point) => self.bounding_box().contains(point),
+            _ => false,
+        };
+
+        let state_changed = self
+            .get_state_manager_mut()
+            .handle_event(event, contains_point);
+
+        Response::NotChanged
+    }
+
+    fn get_state(&self) -> WidgetState {
+        self.get_state_manager().current_state()
+    }
+
+    fn set_state(&mut self, state: WidgetState) -> bool {
+        self.get_state_manager_mut().set_state(state)
+    }
+
+    fn get_state_manager(&self) -> &StateManager;
+    fn get_state_manager_mut(&mut self) -> &mut StateManager;
+}
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum WidgetState {
     #[default]
